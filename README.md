@@ -1,4 +1,4 @@
-# Reporte de Práctica 3: Introducción al manejo de señales biomédicas: Señal de ECG
+# Reporte de Práctica 4: Segmentación de fonocardiogramas (PCG) con Entropía de Shannon normalizada
 Telesalud y Telemedicina  
 Ingeniería Biomédica  
 Departamento de Ingeniería Eléctrica y Electrónica, Tecnológico Nacional de México/IT Tijuana, Blvd. Alberto Limón Padilla s/n, Tijuana, C.P. 22454, B.C., México.  
