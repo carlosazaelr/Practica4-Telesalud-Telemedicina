@@ -7,157 +7,290 @@ Unidad 1: Introducción a la Telesalud y a la Telemedicina
 Ramirez Rodriguez Carlos Azael  
 22212267  
 
-## Introducción
+**Serie:** Análisis → **Segmentación** → (Características → Dataset → ML → Evaluación)
 
-El estudio de las señales bioeléctricas constituye una de las bases fundamentales en el análisis de sistemas biomédicos, ya que permite comprender el comportamiento fisiológico del cuerpo humano a través de la actividad eléctrica de diferentes órganos. Entre estas señales, la señal electrocardiográfica (ECG) es una de las más relevantes, pues refleja la actividad eléctrica del corazón y proporciona información esencial para el diagnóstico y monitoreo de patologías cardiovasculares.
+> Objetivo de esta práctica (Parte 1): detectar y segmentar **ciclos cardiacos** en señales de audio (PCG) usando la **envolvente de Entropía de Shannon normalizada** + filtrado + detección de extremos. Al final tendrás los **límites de cada ciclo** listos para la siguiente práctica (extracción de características cepstrales).
 
-En esta práctica se trabajará con el procesamiento digital de señales de ECG empleando **MATLAB** como herramienta de análisis. El enfoque principal estará en tres etapas fundamentales del tratamiento de señales:
+---
 
-- **Normalización**: permite ajustar la amplitud de la señal a un rango predefinido, lo cual facilita su comparación, almacenamiento y posterior procesamiento.
-- **Amplificación**: mejora la visibilidad de la señal, resaltando componentes de interés que de otra forma serían difíciles de analizar debido a su baja magnitud.
-- **Cuantificación**: consiste en representar la señal continua en niveles discretos de amplitud, emulando el proceso realizado en los sistemas de adquisición mediante convertidores analógico-digitales (ADC).
+## Datos y recursos
 
-## Descarga/Adquisición de datos
+* Biblioteca de sonidos cardiacos (soplos, clicks, etc.):
+  **Heart Sound & Murmur Library — University of Michigan**
+  [https://open.umich.edu/find/open-educational-resources/medical/heart-sound-murmur-library](https://open.umich.edu/find/open-educational-resources/medical/heart-sound-murmur-library)
 
-Para iniciar con el desarrollo de la práctica, se obtuvo un archivo de una señal de ECG desde una base de datos en línea. La base de datos en cuestión fue la siguiente:
+> Descarga al menos 3 audios **diferentes** (normal y patológicos) para comparar.
 
-* **Señal de electrocardiograma (ECG)**. Utilizar una señal de la base de datos que se desee. Por ejemplo:
+---
 
-  * [PhysioNet Database](https://physionet.org/about/database/)  
+# BLOQUE 0 · Carga de datos y pre-procesamiento mínimo
 
-El archivo utilizado para el desarrollo de la práctica fue el siguiente: [ecgdata.mat](p_3/ecgdata.mat)
+### Teoría breve
 
-## Configuración y despliegue en Matlab
+Una señal de PCG $x[n]$ suele estar en rango $[-1, 1]$ o $[-\!32768,32767]$ si es entero. Para análisis robusto conviene trabajar en **mono** y en un rango **normalizado**. Usaremos una ventana corta (p. ej., 2 s) para visualizar con claridad.
 
-Una vez descargado nuestro archivo, se guardó en la carpeta de trabajo para abrirla desde la interfaz de **MATLAB**, tal como se muestra en la siguiente figura.  
-
-<p align="center">
-  <img src="imagenes/intro.png" alt="Espacio de trabajo" width="400">  
-</p>
-<p align="center"><em>Figura 1. Espacio de trabajo</em></p>  
-
-Para realizar el despliegue de la figura de la señal ECG original, se utilizaron las siguientes líneas de código:
+### Código (MATLAB/Octave)
 
 ```matlab
-% Parámetros de la señal
-Fs = 2000;
-Obits = 16;
-ini = 170; % [s]
-fin = 172; % [s]
+clear; close all; clc;
 
-% Despliegue de la figura
-figure;
-load ecgdata.mat
-x = ecgdata;
-x = x(Fs*ini:(Fs*fin)-1);
-t = ini:1/Fs:fin-1/Fs;
-plot(t, x);
-```
-Donde: Fs = Frecuencia de muestreo, Obits = # de bits, ini = Segundo de inicio, fin = Segundo final.
+% === 0.1 Leer audio (ajusta la ruta a tus archivos) ===
+% Ejemplos del repositorio de Michigan (cambia por tus rutas):
+% [x, fs] = audioread('data/09_Apex_HoloSysMur_Supine_Bell.mp3');
+% [x, fs] = audioread('data/02_Apex_SplitS1_Supine_Bell.mp3');
+[x, fs] = audioread('data/07_Apex_MidSysMur_Supine_Bell.mp3');
 
-Una vez ejecutado el código, se obtuvo la señal representada en la Figura 2.  
-
-<p align="center">
-  <img src="imagenes/original.jpg" alt="ECG original" width="800">  
-</p>
-<p align="center"><em>Figura 2. Señal ECG original </em></p>
-
-En orden para preparar la señal para su posterior cuantificación, se necesita trasladar, normalizar y amplificar. Para ello, se utilizó la siguiente sección de código.
-
-```matlab
-% Trasladar
-x_t = x + abs(min(x));
-
-% Normalizar
-x_n = x_t / max(x_t);
-
-% Amplificar
-x_a = x_n * 2^Obits-1;
-```
-Una vez ejecutado, se expresó este proceso en una serie de gráficos, la cual se puede observar en la Figura 3.
-
-<p align="center">
-  <img src="imagenes/fase2.jpg" alt="ECG amplificada" width="800">  
-</p>
-<p align="center"><em>Figura 3. Señal ECG trasladada, normalizada y amplificada </em></p>
-
-## Cuantificación de la señal
-
-Para este paso, se definió una función de nombre **cuantificador**, la cual tendrá como entradas `Xin` (Señal de entrada en forma de vector), `Nbits` (Número de bits del cuantificador) y `Obtis` (Número de bits de la señal). La función correspondiente se definió de la siguiente forma:
-
-```matlab
-function Yout = cuantificador_3(Xin, Nbits, Obits)
-    P = (2^Obits/(2^Nbits))-1 : 2^Obits/(2^Nbits) : 2^Obits-1;
-    Yout = quantiz (Xin,P);
+% === 0.2 Si es estéreo, convertir a mono ===
+if size(x,2) > 1
+    x = mean(x, 2);
 end
+
+% === 0.3 Normalizar a [-1, 1] ===
+a = -1; b = 1;
+x = (x - min(x)) / max(eps, (max(x) - min(x)));  % [0,1]
+x = x * (b - a) + a;                              % [-1,1]
+
+% === 0.4 Ventana de trabajo (2 s para empezar) ===
+t = (0:length(x)-1)/fs;
+max_time = 2;                         % segundos
+sel = t <= max_time;
+x = x(sel);  t = t(sel);
 ```
 
-## Generación y análisis de fragmentos
+---
 
-Para esta sección del desarrollo, se siguieron los siguientes puntos:
-1. Elegir un fragmento de la señal de entre **2 y 4 segundos** para el análisis.
-2. Generar varias versiones de la señal de ECG original usando diferentes valores de `Nbits`.
-3. Desplegar de manera simultánea la señal original y las señales cuantificadas (utilizar el comando `subplot`) y comparar los resultados.
-4. Explicar cómo afectan los diferentes valores del parámetro `Nbits`.
+# BLOQUE 1 · Entropía de Shannon **normalizada** (envolvente básica)
 
-Para ello, se utilizaron las siguientes instrucciones:
+### Teoría (con ecuaciones)
+
+Sea la señal $x[n]$ y su magnitud $s[n]=|x[n]|$. Definimos una **probabilidad instantánea normalizada**:
+
+$$
+p[n] \;=\; \frac{s[n]}{\max_k s[k] + \varepsilon} \;\;\in [0,1]
+$$
+
+donde $\varepsilon$ evita división por cero.
+
+La **energía/entropía de Shannon** puntual (forma habitual en PCG) puede escribirse como:
+
+$$
+E[n] \;=\; -\,p[n]\;\log_b\!\big(p[n] + \varepsilon\big)
+$$
+
+con base $b=\mathrm{e}$ o $b=10$. (En literatura también aparece $E[n]= -\,p^2[n]\log\!\big(p^2[n]\big)$; ambas son **monótonamente relacionadas** y sirven para realzar S1/S2).
+Después **estandarizamos** y normalizamos a $[0,1]$ para obtener una **envolvente** más estable.
+
+### Código
 
 ```matlab
-figure;
-for n = 1: 1 :Obits
-    subplot(4,4,n);
-    x_c = cuantificador_3(x_a,n,Obits);
-    plot(t,x_c)
-    title(strcat(num2str(n),'-bit'))
-    xlabel('Tiempo');
-    ylabel('Amplitud');
-    xlim([ini fin]);
-end
+% === 1.1 Probabilidad normalizada p[n] ===
+p = abs(x);
+p = p ./ max(eps, max(p));
+
+% === 1.2 Entropía/energía de Shannon puntual (log10) ===
+E = -p .* log10(p + eps);     % variante equivalente a -|x|log|x|
+
+% === 1.3 Estandarización y normalización a [0,1] ===
+E_z  = (E - mean(E)) / (std(E) + eps);
+Env0 = (E_z - min(E_z)) / max(eps, (max(E_z) - min(E_z)));   % envolvente base [0,1]
 ```
 
-Al ejecutar el ciclo del listado anterior, se obtiene un mosaico como el de la Figura 4.
+---
 
-<p align="center">
-  <img src="imagenes/fase3.jpg" alt="ECG mosaico" width="800">  
-</p>
-<p align="center"><em>Figura 4. Señal ECG cuantificada a diferentes valores de Nbits </em></p>
+# BLOQUE 2 · Suavizado de la envolvente (pasa-bajas)
 
-## Análisis de resultados
+### Teoría
 
-Para realizar el análisis de resultados, se acomodaron los datos en la siguiente tabla, junto a las observaciones pertinentes.
+El corazón late \~1–2 Hz; S1 y S2 están separados por el **silencio sistólico/diastólico**. El **suavizado pasa-bajas** sobre la envolvente (no sobre $x[n]$) elimina fluctuaciones espurias y resalta la morfología de ciclo. Un **Butterworth** de 4º orden con $f_c\approx 8\text{–}12\,\mathrm{Hz}$ funciona bien.
 
-| Profundidad de bit ó Nbits (niveles de cuantificación) | Calidad (MB/B/R/M/MM) | Observaciones                    |
-| ------------------------------------------------------ | --------------------- | -------------------------------- |
-| 1 (2)                                                  | MM                    | La señal toma únicamene valores de 0 o 1, lo cual no nos deja apreciar bien su forma, pero funciona como un detector de picos. |
-| 2 (4)                                                  | MM                    | Igual que en el nivel anterior, pero se logra apreciar la forma de los picos. |
-| 3 (8)                                                  | MM                    | Al igual que el nivel anterior, con la diferencia de que apenas se alcanzan a notar los niveles inferiores de la señal.                                |
-| 4 (16)                                                 | MM                    | Se puede empezar a distinguir la forma de la señal pero con una muy baja calidad.                                |
-| 5 (32)                                                 | M                     | Un poco mejor que el nivel anterior, aunque aún se nota la pérdida de datos.                                |
-| 6 (64)                                                 | M                     | Igual que en el caso anterior con una cierta mejora.                                |
-| 7 (128)                                                | R                     | El mejor nivel en cuanto a calidad y peso en bits.                                |
-| 8 (256)                                                | R                     | Cierta mejora con respecto al anterior.                                |
-| 9 (512)                                                | B                     | Se puede apreciar una imagen más limpia.                                |
-| 10 (1024)                                              | B                     | Poco cambio con respecto a la anterior                                |
-| 11 (2048)                                              | MB                    | Imagen muy similar a la original.                                |
-| 12 (4096)                                              | MB                    | Sin cambios significativos.                                |
-| 13 (8192)                                              | MB                    | Sin cambios significativos.                                |
-| 14 (16384)                                             | MB                    | Sin cambios significativos.                                |
-| 15 (32768)                                             | MB                    | Sin cambios significativos.                                |
-| 16 (65536)                                             | MB                    | La mejor calidad. |
+$$
+H(z) = \frac{B(z)}{A(z)}, \quad \text{con } \omega_c = 2\pi \frac{f_c}{f_s}
+$$
 
-**¿Cuál es la profundidad de bit adecuada para la señal ECG utilizada en esta práctica?**  
-En mi opinión, el valor de 7 en escala de profundidad de bits. En este nivel se captura de una buena manera las formas que se deberían poder identificar hablando de una señal de ECG, siendo un peso en bits bastante menor al de la imagen original. Sin embargo, la señal de profundidad de bit de 1 puede ser útil si solo se desean contabilizar los picos de la señal.
+### Código
 
-## Conclusión
+```matlab
+% === 2.1 LPF sobre la envolvente (no sobre x) ===
+fc = 10;                                         % corte ~10 Hz
+[b,a] = butter(4, fc/(fs/2), 'low');
+Env = filtfilt(b, a, Env0);
 
-En esta práctica se logró familiarizarse con el manejo de señales bioeléctricas de ECG utilizando MATLAB, aplicando etapas fundamentales de procesamiento digital como la **traslación, normalización, amplificación y cuantificación**. Se evidenció cómo cada una de estas etapas afecta la representación y análisis de la señal:
+% === 2.2 Normalización final a [0,1] ===
+Env = (Env - min(Env)) / max(eps, (max(Env) - min(Env)));
 
-- La **traslación** permitió que todas las muestras de la señal fueran positivas, facilitando su procesamiento posterior.  
-- La **normalización** ajustó la señal a un rango común, haciendo más fácil la comparación entre diferentes fragmentos y señales.  
-- La **amplificación** incrementó la magnitud de la señal hasta el rango completo definido por el número de bits de la adquisición, resaltando detalles importantes.  
-- La **cuantificación**, mediante diferentes niveles de Nbits, mostró cómo la precisión digital afecta la fidelidad de la señal: valores bajos resultan en una representación muy simplificada, mientras que valores mayores permiten conservar la forma de la señal con buena resolución.  
+% Visual rápido
+figure('Name','Señal & Envolvente (Shannon LPF)');
+subplot(2,1,1); plot(t, x, 'k'); grid on;
+title('Señal PCG (normalizada)'); xlabel('Tiempo (s)'); ylabel('Amplitud');
 
-Se concluye que, para la señal ECG utilizada en esta práctica, una **profundidad de 7 bits** proporciona un balance adecuado entre calidad de la señal y eficiencia de almacenamiento, capturando los picos y las características esenciales de la señal sin generar un exceso de datos. Además, se observó que profundidades de bit menores pueden ser útiles para aplicaciones específicas como la detección de picos, mientras que profundidades mayores no ofrecen mejoras significativas perceptibles en la señal.  
+subplot(2,1,2); plot(t, Env, 'b'); grid on;
+title('Envolvente de Shannon (LPF)'); xlabel('Tiempo (s)'); ylabel('Amplitud norm.');
+```
 
-En general, esta práctica permitió comprender la importancia de cada etapa del procesamiento de señales bioeléctricas y cómo las decisiones de cuantificación impactan directamente en el análisis y la interpretación de datos biomédicos.
+---
 
+# BLOQUE 3 · Extremos locales vía derivada (mínimos y máximos)
+
+### Teoría
+
+Con la envolvente $\text{Env}[n]$, calculamos la **derivada discreta** $d[n]=\text{Env}[n]-\text{Env}[n-1]$.
+Un **cambio de signo** en $d[n]$ localiza **mínimos** ($d[n]\!<\!0$ y $d[n+1]\!>\!0$) y **máximos** ($d[n]\!>\!0$ y $d[n+1]\!<\!0$).
+
+### Código
+
+```matlab
+% === 3.1 Derivada discreta y detección de cambios de signo ===
+d = diff(Env);
+idx_ext = []; tipo = [];  % tipo: 1 = min, 2 = max
+
+for i = 1:length(d)-1
+    if d(i) < 0 && d(i+1) > 0
+        idx_ext(end+1) = i+1; tipo(end+1) = 1;  % mínimo
+    elseif d(i) > 0 && d(i+1) < 0
+        idx_ext(end+1) = i+1; tipo(end+1) = 2;  % máximo
+    end
+end
+
+% Visual
+figure('Name','Envolvente con min/máx');
+plot(t, Env, 'b'); hold on; grid on;
+plot(t(idx_ext(tipo==1)), Env(idx_ext(tipo==1)), 'go', 'DisplayName','Mínimos');
+plot(t(idx_ext(tipo==2)), Env(idx_ext(tipo==2)), 'ro', 'DisplayName','Máximos');
+legend; xlabel('Tiempo (s)'); ylabel('Amplitud norm.');
+title('Extremos locales sobre la envolvente');
+```
+
+---
+
+# BLOQUE 4 · Tripletes mín–máx–mín y **área** del triángulo
+
+### Teoría
+
+Un **evento** S1 o S2 suele coincidir con un **máximo** flanqueado por **mínimos** en la envolvente.
+Modelamos cada candidato como un **triángulo** en el plano (tiempo, amplitud) con vértices $(t_1,y_1)$, $(t_2,y_2)$, $(t_3,y_3)$.
+El **área** es:
+
+$$
+A \;=\; \frac{1}{2}\,\big|\,x_1 (y_2 - y_3) + x_2 (y_3 - y_1) + x_3 (y_1 - y_2)\,\big|
+$$
+
+Triángulos con **mayor área** $\Rightarrow$ eventos más **prominentes**.
+
+### Código
+
+```matlab
+% === 4.1 Construcción de tripletes mín–máx–mín ===
+tri_samp = []; tri_time = []; tri_amp = [];
+for k = 1:length(tipo)-2
+    if tipo(k)==1 && tipo(k+1)==2 && tipo(k+2)==1
+        i1 = idx_ext(k); i2 = idx_ext(k+1); i3 = idx_ext(k+2);
+        tri_samp(end+1,:) = [i1,i2,i3];                  %#ok<SAGROW>
+        tri_time(end+1,:) = [t(i1), t(i2), t(i3)];       %#ok<SAGROW>
+        tri_amp(end+1,:)  = [Env(i1), Env(i2), Env(i3)]; %#ok<SAGROW>
+    end
+end
+
+% === 4.2 Área de cada triángulo ===
+areas = zeros(size(tri_time,1),1);
+for i = 1:size(tri_time,1)
+    x1=tri_time(i,1); y1=tri_amp(i,1);
+    x2=tri_time(i,2); y2=tri_amp(i,2);
+    x3=tri_time(i,3); y3=tri_amp(i,3);
+    areas(i) = 0.5 * abs( x1*(y2-y3) + x2*(y3-y1) + x3*(y1-y2) );
+end
+
+% Visual
+figure('Name','Triángulos mín–máx–mín');
+plot(t, Env, 'g', 'LineWidth', 1.2); hold on; grid on;
+for i = 1:size(tri_time,1)
+    tx = [tri_time(i,:), tri_time(i,1)];
+    ty = [tri_amp(i,:),  tri_amp(i,1)];
+    plot(tx, ty, 'r-', 'LineWidth', 1.0);
+end
+plot(t(idx_ext), Env(idx_ext), 'ko', 'MarkerSize', 4);
+xlabel('Tiempo (s)'); ylabel('Amplitud norm.');
+title('Envolvente y triángulos candidatos');
+```
+
+---
+
+# BLOQUE 5 · Selección de eventos prominentes y **ciclos** cardiacos
+
+### Teoría
+
+1. **Filtra** triángulos por área $A > \bar{A}$ (umbral simple).
+2. Convierte cada triángulo en un **ciclo** provisional usando $[t_{\min1},\, t_{\min2}]$.
+3. Restringe por **fisiología**:
+
+   * Intervalo RR $\in [0.3,\,1.5]\,\mathrm{s}$ (≈ 40–200 lpm).
+   * Sin solapes.
+
+### Código
+
+```matlab
+% === 5.1 Selección por área (umbral: promedio) ===
+Amed = mean(areas);
+mask_big = areas > Amed;
+
+% === 5.2 Propuesta de ciclos: [min1, min2] de cada triángulo grande ===
+ciclos_idx = tri_samp(mask_big, [1 3]);  % índices
+ciclos_idx = sortrows(ciclos_idx, 1);
+
+% === 5.3 Limpieza por duración fisiológica y no solape ===
+minRR = round(0.30*fs);   % 0.30 s
+maxRR = round(1.50*fs);   % 1.50 s
+ciclos_ref = [];
+for i = 1:size(ciclos_idx,1)
+    L = ciclos_idx(i,2) - ciclos_idx(i,1);
+    if L >= minRR && L <= maxRR
+        if isempty(ciclos_ref) || ciclos_idx(i,1) > ciclos_ref(end,2)
+            ciclos_ref = [ciclos_ref; ciclos_idx(i,:)]; %#ok<AGROW>
+        end
+    end
+end
+
+% === 5.4 Visual: sombrear ciclos en la envolvente ===
+figure('Name','Ciclos cardiacos detectados');
+plot(t, Env, 'k'); grid on; hold on;
+for i = 1:size(ciclos_ref,1)
+    i1 = ciclos_ref(i,1); i2 = ciclos_ref(i,2);
+    fill([t(i1) t(i2) t(i2) t(i1)], [0 0 1 1], ...
+         'c', 'FaceAlpha', 0.18, 'EdgeColor','none');
+end
+legend('Envolvente','Ciclos'); xlabel('Tiempo (s)'); ylabel('Amplitud norm.');
+title('Ciclos cardiacos (propuestos)');
+```
+
+---
+
+# BLOQUE 6 · Exportación de resultados para la **siguiente práctica**
+
+### Teoría
+
+Guardamos **índices** y **tiempos** $[t_{\text{ini}}, t_{\text{fin}}]$ de cada ciclo. Esto se usará después para **recortar ciclos** y extraer **características cepstrales** (MFCC/cepstrum clásico, etc.).
+
+### Código
+
+```matlab
+ciclos_t = [ t(ciclos_ref(:,1)) , t(ciclos_ref(:,2)) ];
+save resultados_segmentacion.mat fs t x Env ciclos_ref ciclos_t
+disp('>> Segmentación completada. Guardado: resultados_segmentacion.mat');
+```
+
+---
+
+## Experimentos (incluir en reporte)
+
+1. Repite con **3 audios** (normal + patológicos).
+2. Cambia $f_c$ del LPF (8, 10, 12 Hz). ¿Cómo afecta extremos y ciclos?
+3. Cambia la **base del log** (ln vs log10). ¿Diferencias prácticas?
+4. Agrega opcionalmente un **pasa-bandas 20–400 Hz** **antes** de Shannon si el audio es ruidoso.
+5. Reporta: capturas (envolvente+extremos, triángulos, ciclos), **#ciclos**, **RR medio**, observaciones, falsos ± y cómo los mitigaste.
+
+---
+
+## Pasos que se realizarán en las siguientes prácticas:
+
+* **Extracción de características por ciclo**: **MFCC/cepstrum** del PCG, energía por ventana, ZCR, etc.
+* **Construcción de dataset** (características + etiquetas).
+* **Entrenamiento ML** (SVM/kNN/RF) y métricas.
