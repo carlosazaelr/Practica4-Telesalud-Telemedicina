@@ -283,23 +283,21 @@ disp('>> Segmentación completada. Guardado: resultados_segmentacion.mat');
 
 1. Repite con **3 audios** (normal + patológicos).
 <p align="center">
-  | Imagen 1 | Imagen 2 | Imagen 3 |
-|:--------:|:--------:|:--------:|
-| ![Normal](imagenes/p11) | ![Normal](imagenes/p12) | ![Normal](imagenes/p13) |
-
-<p align="center"><em>Figura 1. Señal normal</em></p>
+  <img src="imagenes/p11.jpg" alt="Soplo" width="800">
+  <img src="imagenes/p12.jpg" alt="Soplo" width="800">
+  <img src="imagenes/p13.jpg" alt="Soplo" width="800">
 </p>
 <p align="center"><em>Figura 1. Señal normal </em></p>
 <p align="center">
-  <img src="imagenes/p21" alt="Soplo" width="800">
-  <img src="imagenes/p22" alt="Soplo" width="800">
-  <img src="imagenes/p23" alt="Soplo" width="800">
+  <img src="imagenes/p21.jpg" alt="Soplo" width="800">
+  <img src="imagenes/p22.jpg" alt="Soplo" width="800">
+  <img src="imagenes/p23.jpg" alt="Soplo" width="800">
 </p>
 <p align="center"><em>Figura 2. Señal soplo </em></p>
 <p align="center">
- <img src="imagenes/p31" alt="Click" width="800">
- <img src="imagenes/p32" alt="Click" width="800">
- <img src="imagenes/p33" alt="Click" width="800">
+ <img src="imagenes/p31.jpg" alt="Click" width="800">
+ <img src="imagenes/p32.jpg" alt="Click" width="800">
+ <img src="imagenes/p33.jpg" alt="Click" width="800">
 </p>
 <p align="center"><em>Figura 3. Señal click </em></p>
 
