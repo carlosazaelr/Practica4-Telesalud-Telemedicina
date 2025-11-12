@@ -295,9 +295,9 @@ disp('>> Segmentación completada. Guardado: resultados_segmentacion.mat');
 </p>
 <p align="center"><em>Figura 2. Señal soplo </em></p>
 <p align="center">
- <img src="imagenes/p31" alt="Normal" width="800">
- <img src="imagenes/p32" alt="Normal" width="800">
- <img src="imagenes/p33" alt="Normal" width="800">
+ <img src="imagenes/p31" alt="Click" width="800">
+ <img src="imagenes/p32" alt="Click" width="800">
+ <img src="imagenes/p33" alt="Click" width="800">
 </p>
 <p align="center"><em>Figura 3. Señal click </em></p>
 
