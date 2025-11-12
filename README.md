@@ -283,9 +283,11 @@ disp('>> Segmentación completada. Guardado: resultados_segmentacion.mat');
 
 1. Repite con **3 audios** (normal + patológicos).
 <p align="center">
-  <img src="imagenes/p11" alt="Normal" width="800">
-  <img src="imagenes/p12" alt="Normal" width="800">
-  <img src="imagenes/p13" alt="Normal" width="800">
+  | Imagen 1 | Imagen 2 | Imagen 3 |
+|:--------:|:--------:|:--------:|
+| ![Normal](imagenes/p11) | ![Normal](imagenes/p12) | ![Normal](imagenes/p13) |
+
+<p align="center"><em>Figura 1. Señal normal</em></p>
 </p>
 <p align="center"><em>Figura 1. Señal normal </em></p>
 <p align="center">
