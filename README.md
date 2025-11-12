@@ -282,6 +282,26 @@ disp('>> Segmentación completada. Guardado: resultados_segmentacion.mat');
 ## Experimentos (incluir en reporte)
 
 1. Repite con **3 audios** (normal + patológicos).
+<p align="center">
+  <img src="imagenes/p11" alt="Normal" width="800">
+  <img src="imagenes/p12" alt="Normal" width="800">
+  <img src="imagenes/p13" alt="Normal" width="800">
+</p>
+<p align="center"><em>Figura 1. Señal normal </em></p>
+<p align="center">
+  <img src="imagenes/p21" alt="Soplo" width="800">
+  <img src="imagenes/p22" alt="Soplo" width="800">
+  <img src="imagenes/p23" alt="Soplo" width="800">
+</p>
+<p align="center"><em>Figura 2. Señal soplo </em></p>
+<p align="center">
+ <img src="imagenes/p31" alt="Normal" width="800">
+ <img src="imagenes/p32" alt="Normal" width="800">
+ <img src="imagenes/p33" alt="Normal" width="800">
+</p>
+<p align="center"><em>Figura 3. Señal click </em></p>
+
+
 2. Cambia $f_c$ del LPF (8, 10, 12 Hz). ¿Cómo afecta extremos y ciclos?
 3. Cambia la **base del log** (ln vs log10). ¿Diferencias prácticas?
 4. Agrega opcionalmente un **pasa-bandas 20–400 Hz** **antes** de Shannon si el audio es ruidoso.
